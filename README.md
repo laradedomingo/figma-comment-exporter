@@ -29,7 +29,7 @@ Así queda la pestaña `Comentarios` en Google Sheets tras una sincronización: 
 1. En [Google Cloud Console](https://console.cloud.google.com/), crea un proyecto (o usa uno existente) y activa la **Google Sheets API**.
 2. Ve a **IAM y administración → Cuentas de servicio** y crea una cuenta de servicio.
 3. En esa cuenta, **Claves → Agregar clave → Crear clave nueva → JSON**. Se descargará un archivo `.json`.
-4. Guárdalo como `service-account.json` en la raíz del proyecto (está en `.gitignore`).
+4. Guárdalo como `service-account.json` en la raíz del proyecto (está en `.gitignore`). Puedes ver la estructura esperada en [service-account.example.json](service-account.example.json).
 
 ### 3. Hoja de Google Sheets
 

@@ -5,4 +5,5 @@ node_modules/
 .cache/
 *.json.key
 service-account*.json
+!service-account.example.json
 .DS_Store
