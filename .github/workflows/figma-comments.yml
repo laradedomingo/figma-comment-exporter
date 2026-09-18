@@ -1,0 +1,45 @@
+name: Sincronizar comentarios de Figma
+
+on:
+  schedule:
+    # Cada 30 min (en los minutos 17 y 47) de 8:00 a 19:59, de lunes a viernes.
+    # Se evitan los minutos 0 y 30 porque GitHub retrasa más las ejecuciones en punto.
+    - cron: '17,47 8-19 * * 1-5'
+      timezone: 'Europe/Madrid'
+  workflow_dispatch: # Permite lanzarlo a mano desde la pestaña Actions
+
+concurrency:
+  group: figma-comments-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install --no-audit --no-fund
+
+      - name: Caché de nombres de capas
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: figma-node-names-${{ github.run_id }}
+          restore-keys: figma-node-names-
+
+      - name: Sincronizar
+        run: node sync.mjs
+        env:
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SHEET_ID: ${{ vars.SHEET_ID }}
+          FIGMA_FILE_KEYS: ${{ vars.FIGMA_FILE_KEYS }}
+          FIGMA_FOLDER_ID: ${{ vars.FIGMA_FOLDER_ID }}

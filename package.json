@@ -1,0 +1,13 @@
+{
+  "name": "figma-comments-sync",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20.6" },
+  "scripts": {
+    "sync": "node sync.mjs",
+    "sync:local": "node --env-file=.env sync.mjs"
+  },
+  "dependencies": {
+    "googleapis": "^181.0.0"
+  }
+}
