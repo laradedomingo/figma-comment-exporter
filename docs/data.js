@@ -1,0 +1,1 @@
+window.FIGMA_CSV = {"name":"figma-comments - Comentarios.csv","csv":"Archivo,Hilo,Tipo,Estado,Autor,Mensaje,Creado,Resuelto,Capa / pantalla,Enlace,ID comentario,ID hilo\r\nshadcn-dashboard,1,Comentario,Abierto,Lara de Domingo,Comentario de prueba: Hola Mundo,2026-09-18 20:46,,Page 1,https://www.figma.com/design/dCX4d6i9rO4ZMiN54w37Nr?node-id=0-1,1932997712,1932997712"};

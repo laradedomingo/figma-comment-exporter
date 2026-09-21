@@ -18,8 +18,10 @@ const API = 'https://api.figma.com';
 
 const HEADER = [
   'Archivo', 'Hilo', 'Tipo', 'Estado', 'Autor', 'Mensaje',
-  'Creado', 'Resuelto', 'Capa / pantalla', 'Enlace', 'ID comentario', 'ID hilo',
+  'Creado', 'Resuelto', 'Página', 'Capa / pantalla', 'Enlace', 'ID comentario', 'ID hilo',
 ];
+const LAST_COLUMN = 'M'; // Columna de la última cabecera de HEADER.
+const WHOLE_PAGE = '(toda la página)';
 
 const warnings = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -78,8 +80,8 @@ async function getFiles() {
   return [...files].map(([key, name]) => ({ key, name }));
 }
 
-// Los nombres de capa salen de un endpoint con límites estrictos (Tier 1),
-// así que se guardan en caché y solo se piden los node_id nuevos.
+// La página y el frame de cada comentario salen de endpoints con límites estrictos
+// (Tier 1), así que se guardan en caché y solo se piden los node_id nuevos.
 async function loadCache() {
   try {
     return JSON.parse(await readFile(CACHE_PATH, 'utf8'));
@@ -93,17 +95,38 @@ async function saveCache(cache) {
   await writeFile(CACHE_PATH, JSON.stringify(cache));
 }
 
-async function resolveNodeNames(fileKey, nodeIds, cache) {
+// Devuelve { node_id: { page, layer } }. Una sola petición con depth=2 trae las páginas y
+// sus frames de primer nivel. Los nodos que no aparecen ahí (anidados o eliminados) se
+// buscan por nombre y quedan sin página. Las entradas antiguas de la caché eran solo un
+// texto (el nombre de la capa): se vuelven a resolver.
+async function resolveNodeInfo(fileKey, nodeIds, cache) {
   const known = (cache[fileKey] ||= {});
-  const missing = nodeIds.filter((id) => !(id in known));
+  const missing = nodeIds.filter((id) => typeof known[id] !== 'object');
   if (!FETCH_NODE_NAMES || !missing.length) return known;
 
-  for (let i = 0; i < missing.length; i += 50) {
-    const batch = missing.slice(i, i + 50);
+  const file = await figma(`/v1/files/${fileKey}?depth=2`, { optional: true });
+  if (!file) return known; // Sin datos esta vez; se reintenta en la siguiente ejecución.
+
+  const index = {};
+  for (const page of file.document?.children ?? []) {
+    index[page.id] = { page: page.name, layer: WHOLE_PAGE };
+    for (const frame of page.children ?? []) index[frame.id] = { page: page.name, layer: frame.name };
+  }
+
+  const unindexed = [];
+  for (const id of missing) {
+    if (index[id]) known[id] = index[id];
+    else unindexed.push(id);
+  }
+
+  for (let i = 0; i < unindexed.length; i += 50) {
+    const batch = unindexed.slice(i, i + 50);
     const ids = batch.map(encodeURIComponent).join(',');
     const data = await figma(`/v1/files/${fileKey}/nodes?ids=${ids}&depth=1`, { optional: true });
-    if (!data) break; // Sin nombres esta vez; se reintenta en la siguiente ejecución.
-    for (const id of batch) known[id] = data.nodes?.[id]?.document?.name ?? '(capa eliminada)';
+    if (!data) break;
+    for (const id of batch) {
+      known[id] = { page: '', layer: data.nodes?.[id]?.document?.name ?? '(capa eliminada)' };
+    }
   }
   return known;
 }
@@ -118,7 +141,7 @@ const fileLink = (fileKey) => `https://www.figma.com/design/${fileKey}`;
 const nodeLink = (fileKey, nodeId) =>
   `${fileLink(fileKey)}?node-id=${encodeURIComponent(nodeId.replace(/:/g, '-'))}`;
 
-function buildRows(file, comments, names) {
+function buildRows(file, comments, nodeInfo) {
   const threads = comments
     .filter((c) => !c.parent_id)
     .sort((a, b) => Number(a.order_id || 0) - Number(b.order_id || 0));
@@ -128,7 +151,9 @@ function buildRows(file, comments, names) {
   for (const t of threads) {
     const nodeId = t.client_meta?.node_id;
     const status = t.resolved_at ? 'Resuelto' : 'Abierto';
-    const layer = nodeId ? names[nodeId] ?? '' : '(sin capa)';
+    const info = nodeId ? nodeInfo[nodeId] : null;
+    const page = nodeId ? info?.page ?? '' : '(sin página)';
+    const layer = nodeId ? info?.layer ?? '' : '(sin capa)';
     const link = nodeId ? nodeLink(file.key, nodeId) : fileLink(file.key);
     const threadReplies = replies
       .filter((r) => r.parent_id === t.id)
@@ -145,6 +170,7 @@ function buildRows(file, comments, names) {
         safeText(c.message || ''),
         fmtDate(c.created_at),
         isThread ? fmtDate(t.resolved_at) : '',
+        page,
         layer,
         link,
         c.id,
@@ -178,7 +204,7 @@ async function writeSheet(rows, fileCount) {
     });
   }
 
-  await sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: `'${SHEET_TAB}'!A:L` });
+  await sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: `'${SHEET_TAB}'!A:${LAST_COLUMN}` });
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
     range: `'${SHEET_TAB}'!A1`,
@@ -212,8 +238,8 @@ async function main() {
   for (const file of files) {
     const { comments } = await figma(`/v1/files/${file.key}/comments`);
     const nodeIds = [...new Set(comments.map((c) => c.client_meta?.node_id).filter(Boolean))];
-    const names = await resolveNodeNames(file.key, nodeIds, cache);
-    rows.push(...buildRows(file, comments, names));
+    const nodeInfo = await resolveNodeInfo(file.key, nodeIds, cache);
+    rows.push(...buildRows(file, comments, nodeInfo));
     console.log(`${file.name}: ${comments.length} comentarios`);
   }
 

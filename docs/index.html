@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comentarios de Figma</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1a1d21;
+    --muted: #667085;
+    --border: #e1e4ea;
+    --accent: #5b3df5;
+    --accent-soft: #eeebff;
+    --open: #b54708;
+    --open-bg: #fff4e5;
+    --done: #067647;
+    --done-bg: #e6f6ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --surface: #1d2025;
+      --text: #eceef2;
+      --muted: #9aa3b2;
+      --border: #2e333b;
+      --accent: #9b8cff;
+      --accent-soft: #2a2545;
+      --open: #fdb022;
+      --open-bg: #3a2a0d;
+      --done: #47cd89;
+      --done-bg: #0f2f22;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px; }
+  h1 { margin: 0; font-size: 22px; }
+  .source { color: var(--muted); font-size: 13px; }
+  .source label { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .source input { display: none; }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .primary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field > span { font-size: 12px; font-weight: 600; color: var(--muted); }
+  select, input[type="search"], input[type="date"] {
+    width: 100%;
+    padding: 7px 9px;
+    font: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  select:focus, input:focus, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .range { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  details.more { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; }
+  details.more summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--muted); }
+  details.more .primary { margin-top: 12px; }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .count { color: var(--muted); }
+  .count strong { color: var(--text); }
+  button {
+    font: inherit; cursor: pointer; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px;
+  }
+  button:hover { border-color: var(--accent); }
+
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 9px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+  th { position: sticky; top: 0; background: var(--surface); font-size: 12px; color: var(--muted); white-space: nowrap; user-select: none; }
+  th button { all: unset; cursor: pointer; font-weight: 600; }
+  th button:focus-visible { outline: 2px solid var(--accent); }
+  th .arrow { color: var(--accent); }
+  tr:last-child td { border-bottom: 0; }
+  td.msg { min-width: 280px; max-width: 520px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  td.nowrap { white-space: nowrap; }
+  td.id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  tr.reply td { background: color-mix(in srgb, var(--bg) 60%, transparent); }
+  tr.reply td.msg { padding-left: 28px; }
+  td a { color: var(--accent); white-space: nowrap; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge.open { color: var(--open); background: var(--open-bg); }
+  .badge.done { color: var(--done); background: var(--done-bg); }
+  .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+
+  .drop { border: 2px dashed var(--border); border-radius: 10px; padding: 40px 16px; text-align: center; color: var(--muted); }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .error { color: var(--open); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Comentarios de Figma</h1>
+    <div class="source">
+      <span id="source-name"></span>
+      <label>Cargar otro CSV<input type="file" id="file" accept=".csv,text/csv"></label>
+    </div>
+  </header>
+
+  <div id="drop" class="drop" hidden>
+    <p id="drop-msg">Arrastra aquí el CSV exportado de Google Sheets o</p>
+    <div class="source"><label>selecciónalo<input type="file" id="file2" accept=".csv,text/csv"></label></div>
+  </div>
+
+  <div id="app" hidden>
+    <section class="panel" aria-label="Filtros">
+      <div class="primary" id="primary"></div>
+      <details class="more" id="more">
+        <summary>Más filtros</summary>
+        <div class="primary" id="secondary"></div>
+      </details>
+    </section>
+
+    <div class="bar">
+      <div class="count" id="count"></div>
+      <button type="button" id="reset">Limpiar filtros</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>Ningún comentario coincide con los filtros.</div>
+    </div>
+  </div>
+</main>
+
+<script src="data.js"></script>
+<script>
+// Por defecto se muestra el CSV embebido en data.js (se genera con `npm run viewer` a partir
+// de docs/figma-comments - Comentarios.csv). Si no existe, se intenta leer el CSV por HTTP.
+const DEFAULT_CSV = 'figma-comments - Comentarios.csv';
+
+// Nombres de columna que genera sync.mjs.
+const COL = {
+  page: 'Página',
+  layer: 'Capa / pantalla',
+  message: 'Mensaje',
+  link: 'Enlace',
+  type: 'Tipo',
+  status: 'Estado',
+  thread: 'Hilo',
+};
+const MAX_SELECT_VALUES = 40;
+
+const $ = (id) => document.getElementById(id);
+let headers = [], rows = [], filters = {}, sort = { col: null, dir: 1 };
+let kinds = {}; // columna -> 'select' | 'date' | 'text'
+
+// ---------- CSV ----------
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+  const out = [];
+  let row = [], field = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else quoted = false;
+      } else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.some((v) => v !== '')) out.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some((v) => v !== '')) out.push(row);
+  return out;
+}
+
+function load(text, name) {
+  const table = parseCSV(text);
+  if (table.length < 2) return showDrop('El CSV no tiene filas de datos.', true);
+  headers = table[0].map((h) => h.trim());
+  rows = table.slice(1).map((r) => Object.fromEntries(headers.map((h, i) => [h, (r[i] ?? '').trim()])));
+  $('source-name').textContent = name + ' · ';
+  init();
+}
+
+// ---------- Filtros ----------
+const isDate = (v) => /^\d{4}-\d{2}-\d{2}/.test(v);
+const uniq = (col, subset = rows) => [...new Set(subset.map((r) => r[col]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+
+function detectKinds() {
+  kinds = {};
+  for (const h of headers) {
+    const vals = rows.map((r) => r[h]).filter(Boolean);
+    if (h === COL.link) kinds[h] = null; // solo se muestra
+    else if (vals.length && vals.every(isDate)) kinds[h] = 'date';
+    else if (h === COL.message || /^ID\b/i.test(h) || h === COL.thread) kinds[h] = 'text';
+    else if (h === COL.page || h === COL.layer) kinds[h] = 'select';
+    else kinds[h] = uniq(h).length <= MAX_SELECT_VALUES ? 'select' : 'text';
+  }
+}
+
+function field(label, control) {
+  const wrap = document.createElement('label');
+  wrap.className = 'field';
+  const s = document.createElement('span');
+  s.textContent = label;
+  wrap.append(s, control);
+  return wrap;
+}
+
+function buildFilters() {
+  $('primary').replaceChildren();
+  $('secondary').replaceChildren();
+  filters = {};
+  const hasPage = headers.includes(COL.page);
+  // Los dos filtros principales van primero; el resto, por orden de columna.
+  const primary = [hasPage && COL.page, headers.includes(COL.layer) && COL.layer, COL.status, COL.message].filter((h) => h && headers.includes(h));
+  const secondary = headers.filter((h) => kinds[h] && !primary.includes(h));
+
+  const make = (h, target) => {
+    const kind = kinds[h];
+    let control;
+    if (kind === 'select') {
+      control = document.createElement('select');
+      control.dataset.col = h;
+      control.addEventListener('change', () => {
+        filters[h] = control.value;
+        if (h === COL.page) refreshLayerOptions();
+        render();
+      });
+    } else if (kind === 'date') {
+      control = document.createElement('div');
+      control.className = 'range';
+      for (const edge of ['from', 'to']) {
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.setAttribute('aria-label', `${h} ${edge === 'from' ? 'desde' : 'hasta'}`);
+        input.addEventListener('input', () => {
+          (filters[h] ||= {})[edge] = input.value;
+          render();
+        });
+        control.append(input);
+      }
+    } else {
+      control = document.createElement('input');
+      control.type = 'search';
+      control.placeholder = 'Buscar…';
+      control.addEventListener('input', () => {
+        filters[h] = control.value.trim().toLowerCase();
+        render();
+      });
+    }
+    const label = h === COL.layer && hasPage ? 'Frame' : h;
+    target.append(field(label, control));
+  };
+
+  primary.forEach((h) => make(h, $('primary')));
+  secondary.forEach((h) => make(h, $('secondary')));
+  $('more').hidden = !secondary.length;
+  refreshSelects();
+}
+
+function setOptions(select, values, current) {
+  select.replaceChildren(new Option('Todos', ''));
+  for (const v of values) select.append(new Option(v, v));
+  select.value = values.includes(current) ? current : '';
+}
+
+function refreshSelects() {
+  for (const sel of document.querySelectorAll('select[data-col]')) {
+    if (sel.dataset.col === COL.layer && headers.includes(COL.page)) continue;
+    setOptions(sel, uniq(sel.dataset.col), filters[sel.dataset.col]);
+    filters[sel.dataset.col] = sel.value;
+  }
+  refreshLayerOptions();
+}
+
+// El desplegable de frames solo ofrece los de la página elegida.
+function refreshLayerOptions() {
+  const sel = document.querySelector(`select[data-col="${COL.layer}"]`);
+  if (!sel || !headers.includes(COL.page)) return;
+  const page = filters[COL.page];
+  const subset = page ? rows.filter((r) => r[COL.page] === page) : rows;
+  setOptions(sel, uniq(COL.layer, subset), filters[COL.layer]);
+  filters[COL.layer] = sel.value;
+}
+
+function matches(r) {
+  for (const [h, f] of Object.entries(filters)) {
+    if (!f) continue;
+    const kind = kinds[h], v = r[h];
+    if (kind === 'select' && v !== f) return false;
+    if (kind === 'text' && !v.toLowerCase().includes(f)) return false;
+    if (kind === 'date') {
+      const d = v.slice(0, 10);
+      if (f.from && (!d || d < f.from)) return false;
+      if (f.to && (!d || d > f.to)) return false;
+    }
+  }
+  return true;
+}
+
+// ---------- Tabla ----------
+function buildHead() {
+  const tr = $('thead');
+  tr.replaceChildren();
+  for (const h of headers) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.setAttribute('aria-sort', sort.col === h ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none');
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = h;
+    if (sort.col === h) {
+      const a = document.createElement('span');
+      a.className = 'arrow';
+      a.textContent = sort.dir === 1 ? ' ▲' : ' ▼';
+      b.append(a);
+    }
+    b.addEventListener('click', () => {
+      sort = { col: h, dir: sort.col === h ? -sort.dir : 1 };
+      buildHead();
+      render();
+    });
+    th.append(b);
+    tr.append(th);
+  }
+}
+
+function cell(h, r) {
+  const td = document.createElement('td');
+  const v = r[h];
+  if (h === COL.message) td.className = 'msg';
+  else if (/^ID\b/i.test(h)) td.className = 'id';
+  else if (kinds[h] === 'date' || h === COL.thread) td.className = 'nowrap';
+
+  if (h === COL.link && /^https?:\/\//i.test(v)) {
+    const a = document.createElement('a');
+    a.href = v;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = 'Abrir en Figma';
+    td.append(a);
+  } else if (h === COL.status && v) {
+    const b = document.createElement('span');
+    b.className = 'badge ' + (v === 'Resuelto' ? 'done' : 'open');
+    b.textContent = v;
+    td.append(b);
+  } else td.textContent = v;
+  return td;
+}
+
+function compare(a, b) {
+  const x = a[sort.col], y = b[sort.col];
+  return x.localeCompare(y, 'es', { numeric: true }) * sort.dir;
+}
+
+function render() {
+  let list = rows.filter(matches);
+  if (sort.col) list = [...list].sort(compare);
+  const body = $('tbody');
+  body.replaceChildren(...list.map((r) => {
+    const tr = document.createElement('tr');
+    if (r[COL.type] === 'Respuesta') tr.className = 'reply';
+    for (const h of headers) tr.append(cell(h, r));
+    return tr;
+  }));
+  $('empty').hidden = list.length > 0;
+  const threads = list.filter((r) => r[COL.type] !== 'Respuesta').length;
+  $('count').innerHTML = '';
+  const strong = document.createElement('strong');
+  strong.textContent = list.length;
+  $('count').append(strong, ` de ${rows.length} filas`, headers.includes(COL.type) ? ` · ${threads} hilos` : '');
+}
+
+function init() {
+  detectKinds();
+  sort = { col: null, dir: 1 };
+  buildFilters();
+  buildHead();
+  $('drop').hidden = true;
+  $('app').hidden = false;
+  render();
+}
+
+$('reset').addEventListener('click', () => {
+  document.querySelectorAll('.panel input').forEach((i) => { i.value = ''; });
+  filters = {};
+  refreshSelects();
+  render();
+});
+
+// ---------- Carga del CSV ----------
+function showDrop(msg, isError) {
+  $('app').hidden = true;
+  $('drop').hidden = false;
+  $('drop-msg').textContent = msg;
+  $('drop-msg').classList.toggle('error', !!isError);
+}
+
+function readFile(file) {
+  if (file) file.text().then((t) => load(t, file.name));
+}
+
+for (const id of ['file', 'file2']) $(id).addEventListener('change', (e) => readFile(e.target.files[0]));
+const drop = $('drop');
+window.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+window.addEventListener('dragleave', () => drop.classList.remove('over'));
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  drop.classList.remove('over');
+  readFile(e.dataTransfer.files[0]);
+});
+
+if (window.FIGMA_CSV) {
+  load(window.FIGMA_CSV.csv, window.FIGMA_CSV.name);
+} else {
+  fetch(encodeURI(DEFAULT_CSV))
+    .then((res) => (res.ok ? res.text() : Promise.reject(new Error(res.status))))
+    .then((text) => load(text, DEFAULT_CSV))
+    .catch(() => showDrop('No se encontró el CSV. Ejecuta `npm run viewer` o arrastra aquí un CSV exportado de Google Sheets, o'));
+}
+</script>
+</body>
+</html>

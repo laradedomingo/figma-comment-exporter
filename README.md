@@ -30,7 +30,7 @@ Así queda la pestaña `Comentarios` en Google Sheets tras una sincronización: 
 3. Copia el token (empieza por `figd_`). Solo se muestra una vez.
 4. Apunta en tu calendario cuándo caduca. Cuando caduque, el workflow fallará y GitHub te avisará por email.
 
-**Límites de uso de la API.** Dependen de tu tipo de asiento, del endpoint y del plan donde esté el archivo. Por ejemplo, un archivo de un plan Starter admite solo 6 peticiones de contenido al mes. Los comentarios usan un endpoint con margen amplio. Los nombres de capa usan uno restrictivo, así que el script los guarda en caché (`.cache/node-names.json`) y solo pide los nuevos. Si no puede pedirlos, sigue sin ellos y lo anota en la pestaña `Sync`.
+**Límites de uso de la API.** Dependen de tu tipo de asiento, del endpoint y del plan donde esté el archivo. Por ejemplo, un archivo de un plan Starter admite solo 6 peticiones de contenido al mes. Los comentarios usan un endpoint con margen amplio. La página y el frame de cada comentario salen de un endpoint restrictivo (una petición por archivo, y solo si hay comentarios nuevos), así que el script los guarda en caché (`.cache/node-names.json`) y solo pide los nuevos. Los comentarios sobre una capa anidada dentro de un frame quedan sin página. Si no puede pedirlos, sigue sin ellos y lo anota en la pestaña `Sync`.
 
 ### Paso 2 · Cuenta de servicio de Google
 
