@@ -14,6 +14,9 @@ const SHEET_TAB = env.SHEET_TAB || 'Comentarios';
 const SYNC_TAB = 'Sync';
 const FETCH_NODE_NAMES = env.FETCH_NODE_NAMES !== 'false';
 const CACHE_PATH = '.cache/node-names.json';
+// LOCAL_ONLY=true: no toca Google Sheets, solo escribe el CSV que lee docs/index.html.
+const LOCAL_ONLY = env.LOCAL_ONLY === 'true';
+const LOCAL_CSV_PATH = 'docs/figma-comments - Comentarios.csv';
 const API = 'https://api.figma.com';
 
 const HEADER = [
@@ -29,8 +32,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function assertEnv() {
   const missing = [];
   if (!FIGMA_TOKEN) missing.push('FIGMA_TOKEN');
-  if (!SHEET_ID) missing.push('SHEET_ID');
-  if (!env.GOOGLE_SERVICE_ACCOUNT_JSON && !env.GOOGLE_SERVICE_ACCOUNT_FILE) {
+  if (!LOCAL_ONLY && !SHEET_ID) missing.push('SHEET_ID');
+  if (!LOCAL_ONLY && !env.GOOGLE_SERVICE_ACCOUNT_JSON && !env.GOOGLE_SERVICE_ACCOUNT_FILE) {
     missing.push('GOOGLE_SERVICE_ACCOUNT_JSON (o GOOGLE_SERVICE_ACCOUNT_FILE en local)');
   }
   if (!FILE_KEYS.length && !FOLDER_ID) missing.push('FIGMA_FILE_KEYS o FIGMA_FOLDER_ID');
@@ -181,6 +184,17 @@ function buildRows(file, comments, nodeInfo) {
   return rows;
 }
 
+// Mismo contenido que la pestaña, sin el apóstrofo que safeText añade para Sheets.
+async function writeLocalCsv(rows) {
+  const cell = (v) => {
+    const t = String(v).replace(/^'(?=[=+\-@])/, '');
+    return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const csv = [HEADER, ...rows].map((r) => r.map(cell).join(',')).join('\n') + '\n';
+  await mkdir(dirname(LOCAL_CSV_PATH), { recursive: true });
+  await writeFile(LOCAL_CSV_PATH, csv);
+}
+
 async function getSheetsClient() {
   const raw = env.GOOGLE_SERVICE_ACCOUNT_JSON || (await readFile(env.GOOGLE_SERVICE_ACCOUNT_FILE, 'utf8'));
   const auth = new google.auth.GoogleAuth({
@@ -244,6 +258,11 @@ async function main() {
   }
 
   await saveCache(cache);
+  if (LOCAL_ONLY) {
+    await writeLocalCsv(rows);
+    console.log(`${LOCAL_CSV_PATH}: ${rows.length} filas de ${files.length} archivo(s). La hoja no se ha modificado.`);
+    return;
+  }
   await writeSheet(rows, files.length);
   console.log(`Hoja actualizada: ${rows.length} filas de ${files.length} archivo(s).`);
 }
