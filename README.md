@@ -10,6 +10,12 @@ Así queda la pestaña `Comentarios` en Google Sheets tras una sincronización: 
 
 ![Hoja de Google Sheets con los comentarios de Figma sincronizados](docs/google-sheet-result.png)
 
+### Visor local
+
+[docs/index.html](docs/index.html) es un visor que se abre con doble clic y muestra los comentarios en una tabla, con filtros por página, frame, estado y mensaje, y un enlace directo a cada comentario en Figma.
+
+![Visor local de comentarios de Figma con filtros y tabla](docs/ui.png)
+
 ## Requisitos
 
 - Node.js 20.6 o superior
